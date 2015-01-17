@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">GeoPhoto</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="camara_no_disponible">Cámara no disponible</string>
+    <string name="error_vista_previa">Error en vista previa</string>
+    <string name="fotografia">Fotografía</string>
+    <string name="realizada_con_exito">realizada con éxito</string>
+    <string name="latitud">Latitud</string>
+    <string name="longitud">Longitud</string>
+    <string name="altitud">Altitud</string>
+    <string name="gps_desactivado">GPS desactivado. Es necesario activarlo.</string>
+    <string name="gps_activado">GPS activado.</string>
+    <string name="esperando_senal">Esperando GPS...</string>
+
+    <string name="no_gps">No hay señal GPS</string>
+    <string name="no_gps_descripcion">Para poder recibir coordenadas es necesario activarlo</string>
+    <string name="aceptar">Aceptar</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="procesando_datos">Procesando datos...</string>
+
+</resources>
