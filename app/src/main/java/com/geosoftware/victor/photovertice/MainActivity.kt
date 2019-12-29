@@ -7,27 +7,30 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
-import android.graphics.drawable.ColorDrawable
 import android.hardware.Camera
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.provider.Settings
-import android.view.*
+import android.view.Display
+import android.view.View
+import android.view.Window
+import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDialogFragment
 import androidx.core.app.ActivityCompat
-import androidx.core.content.FileProvider
 import com.geosoftware.victor.photovertice.data.LstGalleryTask
 import com.geosoftware.victor.photovertice.data.ProcessPictureTask
+import com.geosoftware.victor.photovertice.ui.ImageDialogFragment
+import com.geosoftware.victor.photovertice.ui.ImageDialogListener
 import com.geosoftware.victor.photovertice.ui.ImageGalleryAdapter
-import com.geosoftware.victor.photovertice.utils.*
-import kotlinx.android.synthetic.main.image_dialog_fragment.*
+import com.geosoftware.victor.photovertice.utils.checkGrantedPermission
+import com.geosoftware.victor.photovertice.utils.getInternalDirectory
+import com.geosoftware.victor.photovertice.utils.getInternalDirectoryFile
+import com.geosoftware.victor.photovertice.utils.pasar_a_sexa
 import kotlinx.android.synthetic.main.view_preview.*
-import java.io.File
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -57,9 +60,12 @@ class MainActivity : AppCompatActivity(), LocationListener {
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             mCamera?.startPreview()
             mCamera?.reconnect()
+            progress_circular.visibility = View.GONE
 
             LstGalleryTask(getInternalDirectory()) { imageList ->
                 listView.adapter = ImageGalleryAdapter(this@MainActivity, imageList)
+                showNewImageDialog(imageList.last())
+                listView.visibility = View.VISIBLE
             }.execute()
 
         }.execute() }
@@ -115,14 +121,14 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
         //----- EVENTOS -----
         imageView.setOnClickListener {
+            progress_circular.visibility = View.VISIBLE
             mCamera?.takePicture(null, null, mPicture)
         }
 
         listView.visibility = View.INVISIBLE
         listView.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
             (listView.getItemAtPosition(position) as ImageDataModel).let { selectedImage ->
-                val dialog = ImageDialogFragment.newInstance(selectedImage.src)
-                dialog.show(supportFragmentManager, "Dialog")
+                showNewImageDialog(selectedImage)
             }
         }
 
@@ -178,57 +184,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
         }
     }
 
-    //----- Dialogos
-
-    class ImageDialogFragment : AppCompatDialogFragment() {
-
-        companion object {
-            private const val IMAGE_PATH = "IMAGE_PATH"
-
-            fun newInstance(selectedImagePath: String): ImageDialogFragment {
-                val bundle = Bundle()
-                bundle.putString(IMAGE_PATH, selectedImagePath)
-
-                val fragment = ImageDialogFragment()
-                fragment.arguments = bundle
-                return fragment
-            }
-        }
-
-        override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-            val view = inflater.inflate(R.layout.image_dialog_fragment, container)
-            dialog?.window?.requestFeature(Window.FEATURE_NO_TITLE)
-            dialog?.window?.setBackgroundDrawable(ColorDrawable(0))
-
-            return view
-        }
-
-        override fun onActivityCreated(savedInstanceState: Bundle?) {
-            super.onActivityCreated(savedInstanceState)
-            val imagePath = arguments?.getString(IMAGE_PATH) ?: ""
-            println("victor - imagePath :: $imagePath")
-            val bmp = decodeSampledBitmapFromResource(imagePath, 400, 300)
-
-            bmp?.let {
-                imageView3.setImageBitmap(it)
-
-                imageView3.setOnClickListener {
-                    val intentShare = Intent(Intent.ACTION_SEND)
-                    intentShare.type = "image/*"
-
-                    context?.let { solvedContext ->
-                        intentShare.putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(
-                                solvedContext,
-                                solvedContext.applicationContext?.packageName + ".provider",
-                                File(imagePath)))
-                        intentShare.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        startActivity(Intent.createChooser(intentShare, "GeoPhotos"))
-                    }
-                }
-            }
-        }
-    }
-
     override fun onLocationChanged(location: Location?) {
         val tresDecimales = DecimalFormat("0.000")
         latitude = location?.latitude ?: 0.0
@@ -256,6 +211,18 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private fun initializeLocation() {
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0f, this)
         textView2.text = getString(R.string.esperando_senal)
+    }
+
+    private fun showNewImageDialog(selectedImage: ImageDataModel) {
+        val dialog = ImageDialogFragment.newInstance(selectedImage.src, object : ImageDialogListener {
+            override fun onImageDeleted() {
+                with(listView.adapter as ImageGalleryAdapter) {
+                    remove(selectedImage)
+                    notifyDataSetChanged()
+                }
+            }
+        })
+        dialog.show(supportFragmentManager, "Dialog")
     }
 
     companion object {
